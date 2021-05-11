@@ -63,21 +63,14 @@ app.get("/boardstate", async function (req, res, next) {
 });
 
 app.post("/boardstate", async function (req, res, next) {
-  //we're expecting req.body to contain information about a single changed pixel in the format
-  //{x:int,y:int,color:string};
-  //keep in mind the first row of information is represented by x=0, likewise the first column is y=0
-  console.log(req.body);
-  let { x, y, color } = req.body;
   try {
-    let currentState = await BoardState.findOne().orFail();
-    let newboardState = currentState.state;
-    newboardState[y][x] = color;
-    let newstate = await BoardState.findOneAndUpdate(
+    let { x, y, color } = req.body;
+    let tostring = `state.${y}.${x}`;
+    const board = await BoardState.findOneAndUpdate(
       { test: "test" },
-      { state: newboardState },
-      { new: true }
-    ).orFail();
-    res.status(200).json({ newstate });
+      { $set: { [tostring]: color } }
+    );
+    res.status(200).json({ message: "saved" });
   } catch (err) {
     console.log(err);
     res.status(404).json({ message: "can not place that tile" });
@@ -85,8 +78,8 @@ app.post("/boardstate", async function (req, res, next) {
 });
 
 io.on("connection", (socket) => {
-  BoardState.watch().on("change", (data) => {
-    socket.emit("update", data);
+  socket.on("tilePlace", (data) => {
+    io.emit("tilePlace", data);
   });
 });
 
