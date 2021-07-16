@@ -7,6 +7,7 @@ const server = http.createServer(app);
 const io = socketio(server);
 const cors = require("cors");
 const BoardState = require("./models/boardState");
+const routes = require("./routes/routes")
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
@@ -14,7 +15,11 @@ mongoose.set("useNewUrlParser", true);
 mongoose.set("useFindAndModify", false);
 mongoose.set("useCreateIndex", true);
 mongoose.set("useUnifiedTopology", true);
+//use routes
+app.use(routes);
 
+
+//checks if a boardstate is in the DB, initializes a blank one if not
 async function initBoard() {
   try {
     let existingState = await BoardState.findOne();
@@ -38,45 +43,23 @@ async function initBoard() {
         await initialGrid.save();
       } catch (err) {
         console.log(err);
-        console.log("something fucked up");
+        console.log("something went wrong!");
         return;
       }
     } else {
       return;
     }
   } catch (err) {
-    console.log("something really fucked up");
+    console.log("something went very wrong");
     return;
   }
 }
 
+
+
 initBoard();
 
-app.get("/boardstate", async function (req, res, next) {
-  try {
-    const currentState = await BoardState.findOne();
-    res.json({ state: currentState });
-  } catch (err) {
-    console.log(err);
-    res.status(422).json({ message: "failed" });
-  }
-});
-
-app.post("/boardstate", async function (req, res, next) {
-  try {
-    let { x, y, color } = req.body;
-    let tostring = `state.${y}.${x}`;
-    const board = await BoardState.findOneAndUpdate(
-      { test: "test" },
-      { $set: { [tostring]: color } }
-    );
-    res.status(200).json({ message: "saved" });
-  } catch (err) {
-    console.log(err);
-    res.status(404).json({ message: "can not place that tile" });
-  }
-});
-
+//creates the socket.io connection
 io.on("connection", (socket) => {
   socket.on("tilePlace", (data) => {
     io.emit("tilePlace", data);
